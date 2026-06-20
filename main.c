@@ -91,10 +91,10 @@ typedef struct appState {
     t_inspection *inspection_selected_pointer;
 } t_app_state;
 
-void menuLocations(t_location **locations, t_location **location_selected);
+void menuLocations(t_app_state *app_state);
 void menuSectors(t_app_state *app_state);
 void menuSensors(void);
-void actionMenuLocations(int option, t_location **locations, t_location **location_selected_pointer);
+void actionMenuLocations(int option, t_app_state *appState);
 void actionMenuSectors(int option, t_app_state *app_state);
 void actionMenuSensors(int option);
 void actionMenuInspections(int option);
@@ -111,6 +111,7 @@ void listAllLocations(t_location **list_locations);
 void insertNewLocationAtDatabase(t_location **list_locations,  t_location *new_location);
 void selectLocation(t_location *location, t_location **location_selected);
 t_location *findLocationById(t_location **list_locations, string location_id);
+void deleteLocation(t_location **list_locations, string location_id);
 
 int main(){
     srand(time(NULL));
@@ -126,18 +127,19 @@ int main(){
         ){
             menuSectors(&app_state); 
         } else {
-            menuLocations(&app_state.locations, &app_state.location_selected_pointer);
+            menuLocations(&app_state);
         }   
     }
     return 0;
 }
 
-void menuLocations(t_location **locations, t_location **location_selected_pointer){
+void menuLocations(t_app_state *appState){
         int option;
         printf("Bem-vindo 👋. \n");
         printf("Escolha uma opção: \n");
         printf("1. Criar Planta \n");
         printf("2. Selecionar Planta \n");
+        printf("3. Deletar Planta \n");
         printf("0. Fechar (Sair do programa):. \n");
         printf(":: \n");
         scanf("%i", &option);
@@ -146,7 +148,7 @@ void menuLocations(t_location **locations, t_location **location_selected_pointe
             shutdownProgram();
             return;
         }
-        actionMenuLocations(option, locations, location_selected_pointer);
+        actionMenuLocations(option, appState);
 }
 void menuSectors(t_app_state *app_state){
         int option;
@@ -181,15 +183,15 @@ void menuInspection(){
         actionMenuInspections(option);
 }
 
-void actionMenuLocations(int option, t_location **locations, t_location **location_selected_pointer){
+void actionMenuLocations(int option, t_app_state *app_state){
     switch(option){
             case 1:
                 t_location *new_location = createNewLocation();
-                insertNewLocationAtDatabase(locations, new_location);
+                insertNewLocationAtDatabase(&app_state->locations, new_location);
                 break;
             case 2: 
                 {
-                listAllLocations(locations);
+                listAllLocations(&app_state->locations);
                 string location_id_typed;
                 printf("Digite o ID da planta: \n");
                 printf(":: \n");
@@ -197,16 +199,26 @@ void actionMenuLocations(int option, t_location **locations, t_location **locati
                 t_location *location_found;
                 location_found = (t_location*)malloc(sizeof(t_location));
                 formatStringRemoveEnter(location_id_typed);
-                location_found = findLocationById(locations, location_id_typed);
+                location_found = findLocationById(&app_state->locations, location_id_typed);
                 if(location_found == NULL){
                     printf("Erro ao encontrar planta. \n");
                     return;
                 }
                 printf("name: %s. \n", location_found->name);
-                selectLocation(location_found, location_selected_pointer);
+                selectLocation(location_found, &app_state->location_selected_pointer);
                 break;
                 }
             case 3:
+            {
+                listAllLocations(&app_state->locations);
+                string location_id_typed;
+                printf("Digite o ID da planta: \n");
+                printf(":: \n");
+                fgets(location_id_typed, MAX_STRING_SIZE, stdin);
+                formatStringRemoveEnter(location_id_typed);
+                deleteLocation(&app_state->locations, location_id_typed);
+                break;
+                }
                 break;
             case 4:
                 break;
@@ -338,6 +350,42 @@ t_location *findLocationById(t_location **list_locations, string location_id){
     }
     return copy_list_location ? copy_list_location : NULL;;
 }
+void deleteLocation(t_location **list_locations, string location_id){
+    if(*list_locations == NULL){
+        printf("Não existem plantas. \n");
+        return;
+    }
+
+    t_location *current_location = *list_locations;
+    t_location *temp;
+
+    t_location *location_to_delete = findLocationById(list_locations, location_id);
+
+    if(location_to_delete == NULL){
+        printf("Erro ao deletar planta -> Planta não encontrada. \n");
+        return;
+    }
+
+    //primeiro nó
+    if(current_location == location_to_delete){
+        *list_locations = current_location->next;
+        free(current_location);
+        printf("Planta deletada com sucesso. \n");
+        return;
+    }
+    
+    //nao é o primero nó, encontra o anterior
+    while(current_location->next != NULL && current_location->next != location_to_delete){
+        current_location = current_location->next;
+    }
+
+    if(current_location->next != NULL){
+        temp = current_location->next;
+        current_location->next = temp->next;
+        free(temp);
+    }
+
+};
 
 void resetStateOfMenuSelectedPointers(t_entities entity_type, t_app_state *state){
     switch(entity_type){
