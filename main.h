@@ -27,6 +27,9 @@ void actionMenuInspections(int option, t_app_state *app_state);
 void resetStateOfMenuSelectedPointers(t_entities entity_type, t_app_state *state);
 void shutdownProgram();
 
+void readUserDataBinaryFile(t_app_state *app_state);
+void saveUserDataOnBinaryFile(t_app_state *app_state);
+
 t_location *createNewLocation();
 void insertNewLocationAtDatabase(t_location **list_locations, t_location *new_location);
 void deleteLocationAtDatabase(t_location **list_locations, string location_id);

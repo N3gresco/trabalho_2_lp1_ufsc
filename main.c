@@ -4,7 +4,11 @@
 int main()
 {
     srand(time(NULL));
-    t_app_state app_state = {0};
+
+    t_app_state app_state = {0, .base_datasave_binary_filepath = "output/datasave_binary.txt"};
+
+    readUserDataBinaryFile(&app_state);
+
     for (;;)
     {
         if (app_state.location_selected_pointer != NULL && app_state.sector_selected_pointer != NULL &&
@@ -46,10 +50,35 @@ void menuLocations(t_app_state *appState)
     if (option == 0)
     {
         shutdownProgram();
+        saveUserDataOnBinaryFile(appState);
         return;
     }
     actionMenuLocations(option, appState);
 }
+
+void readUserDataBinaryFile(t_app_state *app_state)
+{
+    FILE *file_datasave = NULL;
+    file_datasave = fopen(app_state->base_datasave_binary_filepath, "rb");
+    if (file_datasave)
+    {
+        //
+
+        fclose(file_datasave);
+    }
+};
+void saveUserDataOnBinaryFile(t_app_state *app_state)
+{
+    FILE *file_datasave = NULL;
+    file_datasave = fopen(app_state->base_datasave_binary_filepath, "wb");
+    if (file_datasave)
+    {
+        //
+
+        fclose(file_datasave);
+    }
+};
+
 void menuSectors(t_app_state *app_state)
 {
     int option;
@@ -89,8 +118,7 @@ void menuInspections(t_app_state *app_state)
     printf("Vendo a planta: %s. \n", app_state->location_selected_pointer->name);
     printf("Vendo o setor: %s. \n", app_state->sector_selected_pointer->name);
     printf("Vendo o Sensor: %s. \n", app_state->sensor_selected_pointer->name);
-    printf("Range Mínimo e Máximo: [%2.f %s \\ %2.f %s]. \n",
-           app_state->sensor_selected_pointer->range_min,
+    printf("Range Mínimo e Máximo: [%2.f %s \\ %2.f %s]. \n", app_state->sensor_selected_pointer->range_min,
            mapSensorTypeUnitToString(app_state->sensor_selected_pointer->sensor_type).response,
            app_state->sensor_selected_pointer->range_max,
            mapSensorTypeUnitToString(app_state->sensor_selected_pointer->sensor_type).response);
@@ -325,6 +353,7 @@ void resetStateOfMenuSelectedPointers(t_entities entity_type, t_app_state *state
 };
 void shutdownProgram()
 {
+
     printf("Encerrando operação. Até logo 👋\n ");
     exit(0);
 }
