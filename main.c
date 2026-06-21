@@ -381,7 +381,6 @@ void actionMenuInspections(int option, t_app_state *app_state)
         break;
     }
 }
-
 void handleGenerateSystemReport(t_app_state *app_state)
 {
     int option;
@@ -444,7 +443,6 @@ void handleSearchInSystem(t_app_state *app_state)
         }
     }
 };
-
 void resetStateOfMenuSelectedPointers(t_entities entity_type, t_app_state *state)
 {
     switch (entity_type)
@@ -1087,6 +1085,7 @@ bool checkIfIsTheSameDay(time_t firstTimestamp, time_t secondTimestamp)
     return date_a_copy.tm_mday == date_b->tm_mday && date_a_copy.tm_mon == date_b->tm_mon &&
            date_a_copy.tm_year == date_b->tm_year;
 }
+
 void searchForSectorDescription(t_location *locations)
 {
     string description;
@@ -1204,8 +1203,9 @@ void generateReportOfSensors(t_location *locations)
                 {
                     printf("\n");
                     printf("ID: %s\nNome: %s \nTipo: %s \nMin/Max: [%.3f/%.3f] \nTotal de leituras: %i\n",
-                           current_sensor->id, current_sensor->name, mapSensorTypeToString(current_sensor->sensor_type).response,
-                           current_sensor->range_min, current_sensor->range_max, current_sensor->inspections_quantity);
+                           current_sensor->id, current_sensor->name,
+                           mapSensorTypeToString(current_sensor->sensor_type).response, current_sensor->range_min,
+                           current_sensor->range_max, current_sensor->inspections_quantity);
                     printf("\n");
 
                     current_sensor = current_sensor->next;
