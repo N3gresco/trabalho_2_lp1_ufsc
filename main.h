@@ -35,6 +35,7 @@ void selectLocation(t_location *location, t_location **location_selected);
 t_location *findLocationById(t_location **list_locations, string location_id);
 t_location *findLocationByIdx(t_location *list, int idx);
 t_location *promptAndFindLocationByIdx(t_location *list_locations);
+int countTotalLocations(t_location *list_locations);
 
 t_sector *createNewSector(t_location *location_selected_pointer);
 void insertNewSectorAtDatabase(t_sector **list_sectors, t_sector *new_sector);
@@ -44,6 +45,7 @@ void selectSector(t_sector *sector, t_sector **sector_selected_pointer);
 t_sector *findSectorById(t_sector *list_sectors, string sector_id);
 t_sector *findSectorByIdx(t_sector *list_sectors, int idx);
 t_sector *promptAndFindSectorByIdx(t_sector *list_sectors);
+int countTotalSectors(t_sector *list_sectors);
 
 t_sensor *createNewSensor(t_sector *sector_selected_pointer);
 void insertNewSensorAtDatabase(t_sensor **list_sensors, t_sensor *new_sensor);
@@ -54,6 +56,7 @@ t_sensor *findSensorById(t_sensor *list_sensor, string sensor_id);
 t_sensor *findSensorByIdx(t_sensor *list_sensor, int idx);
 t_sensor *promptAndFindSensorByIdx(t_sensor *list_sensors);
 t_sensor_template getSensorTemplate(t_sensor_types sensor_type);
+int countTotalSensors(t_sensor *list_sensors);
 
 t_inspection *createNewInspection(t_sensor *sensor_selected_pointer);
 void insertNewInspectionAtDatabase(t_inspection **list_inspections, t_inspection *new_inspection);
@@ -63,6 +66,8 @@ void selectInspection(t_inspection *inspection, t_inspection **inspection_select
 t_inspection *findInspectionById(t_inspection *list_inspections, string inspection_id);
 t_inspection *findInspectionByIdx(t_inspection *list_inspections, int idx);
 t_inspection *promptAndFindInspectionByIdx(t_inspection *list_inspections);
+int countTotalInspections(t_inspection *list_inspection);
+void updateSensorRange(t_sensor *sensor_selected_pointer);
 
 void confirmAndClear();
 bool checkIfIsTheSameDay(time_t firstTimestamp, time_t secondTimestamp);

@@ -1,3 +1,4 @@
+
 #include "main.h"
 
 int main()
@@ -88,10 +89,16 @@ void menuInspections(t_app_state *app_state)
     printf("Vendo a planta: %s. \n", app_state->location_selected_pointer->name);
     printf("Vendo o setor: %s. \n", app_state->sector_selected_pointer->name);
     printf("Vendo o Sensor: %s. \n", app_state->sensor_selected_pointer->name);
+    printf("Range Mínimo e Máximo: [%2.f %s \\ %2.f %s]. \n",
+           app_state->sensor_selected_pointer->range_min,
+           mapSensorTypeUnitToString(app_state->sensor_selected_pointer->sensor_type).response,
+           app_state->sensor_selected_pointer->range_max,
+           mapSensorTypeUnitToString(app_state->sensor_selected_pointer->sensor_type).response);
     listAllInspections(app_state->sensor_selected_pointer->inspections);
     printf("Escolha uma opção: \n");
     printf("1. Gerar leitura no sensor. \n");
     printf("2. Listar leituras do sensor. \n");
+    printf("3. Alterar range (Mín-Máx) de leitura do sensor. \n");
     printf("0. Voltar. \n");
     scanf("%i", &option);
     getchar();
@@ -103,17 +110,23 @@ void actionMenuLocations(int option, t_app_state *app_state)
     {
     case 1: {
         t_location *new_location = createNewLocation();
+        if (new_location == NULL)
+            return;
         insertNewLocationAtDatabase(&app_state->database, new_location);
         confirmAndClear();
         break;
     }
     case 2: {
         t_location *location_found = promptAndFindLocationByIdx(app_state->database);
+        if (location_found == NULL)
+            return;
         selectLocation(location_found, &app_state->location_selected_pointer);
         break;
     }
     case 3: {
         t_location *location_found = promptAndFindLocationByIdx(app_state->database);
+        if (location_found == NULL)
+            return;
         deleteLocationAtDatabase(&app_state->database, location_found->id);
         confirmAndClear();
         break;
@@ -136,16 +149,22 @@ void actionMenuSectors(int option, t_app_state *app_state)
     {
     case 1:
         t_sector *new_sector = createNewSector(app_state->location_selected_pointer);
+        if (new_sector == NULL)
+            return;
         insertNewSectorAtDatabase(&app_state->location_selected_pointer->sectors, new_sector);
         confirmAndClear();
         break;
     case 2: {
         t_sector *sector_found = promptAndFindSectorByIdx(app_state->location_selected_pointer->sectors);
+        if (sector_found == NULL)
+            return;
         selectSector(sector_found, &app_state->sector_selected_pointer);
         break;
     }
     case 3: {
         t_sector *sector_found = promptAndFindSectorByIdx(app_state->location_selected_pointer->sectors);
+        if (sector_found == NULL)
+            return;
         deleteSectorAtDatabase(&app_state->location_selected_pointer->sectors, sector_found->id);
         confirmAndClear();
         break;
@@ -163,16 +182,22 @@ void actionMenuSensors(int option, t_app_state *app_state)
     {
     case 1:
         t_sensor *new_sensor = createNewSensor(app_state->sector_selected_pointer);
+        if (new_sensor == NULL)
+            return;
         insertNewSensorAtDatabase(&app_state->sector_selected_pointer->sensors, new_sensor);
         confirmAndClear();
         break;
     case 2: {
         t_sensor *sensor_found = promptAndFindSensorByIdx(app_state->sector_selected_pointer->sensors);
+        if (sensor_found == NULL)
+            return;
         selectSensor(sensor_found, &app_state->sensor_selected_pointer);
         break;
     }
     case 3: {
         t_sensor *sensor_found = promptAndFindSensorByIdx(app_state->sector_selected_pointer->sensors);
+        if (sensor_found == NULL)
+            return;
         deleteSensorAtDatabase(&app_state->sector_selected_pointer->sensors, sensor_found->id);
         confirmAndClear();
         break;
@@ -197,6 +222,9 @@ void actionMenuInspections(int option, t_app_state *app_state)
         break;
     case 2:
         listAllInspections(app_state->sensor_selected_pointer->inspections);
+        break;
+    case 3:
+        updateSensorRange(app_state->sensor_selected_pointer);
         break;
     case 0:
         resetStateOfMenuSelectedPointers(SENSOR, app_state);
@@ -313,8 +341,6 @@ t_location *createNewLocation()
     fgets(new_location->name, MAX_STRING_SIZE, stdin);
     formatStringToSystemPattern(new_location->name);
 
-    new_location->sectors_quantity = 0;
-
     printf("Nova planta foi cadastrada com sucesso. \n");
     return new_location;
 };
@@ -382,7 +408,7 @@ void listAllLocations(t_location *list_locations)
     while (list_locations != NULL)
     {
         printf("[IDX:  %i] -> [ID: %s, Nome: %s, Total de setores: %i]. \n", initial_idx, list_locations->id,
-               list_locations->name, list_locations->sectors_quantity);
+               list_locations->name, countTotalSectors(list_locations->sectors));
 
         list_locations = list_locations->next;
         counter++, initial_idx++;
@@ -417,17 +443,35 @@ t_location *findLocationByIdx(t_location *list_locations, int idx)
 }
 t_location *promptAndFindLocationByIdx(t_location *list_locations)
 {
+    t_location *location_found = NULL;
+    int total_location = countTotalLocations(list_locations);
+    if (total_location < 1)
+    {
+        printf("Sem plantas existentes. \n");
+        return location_found;
+    }
     listAllLocations(list_locations);
     int location_idx;
     printf("Digite o índice da planta: \n");
     printf(":: \n");
     scanf("%i", &location_idx);
-    t_location *location_found = findLocationByIdx(list_locations, location_idx);
+    location_found = findLocationByIdx(list_locations, location_idx);
     if (location_found == NULL)
     {
         printf("Erro ao encontrar planta. \n");
     }
     return location_found;
+}
+int countTotalLocations(t_location *list_locations)
+{
+    t_location *current_location = list_locations;
+    int counter = 0;
+    while (current_location != NULL)
+    {
+        counter++;
+        current_location = current_location->next;
+    }
+    return counter;
 }
 
 t_sector *createNewSector(t_location *location_selected_pointer)
@@ -446,7 +490,6 @@ t_sector *createNewSector(t_location *location_selected_pointer)
     fgets(new_sector->description, MAX_STRING_SIZE, stdin);
     formatStringToSystemPattern(new_sector->description);
 
-    new_sector->sensors_quantity = 0;
     strcpy(new_sector->location_id, location_selected_pointer->id);
 
     printf("Novo setor foi cadastrado com sucesso. \n");
@@ -516,7 +559,7 @@ void listAllSectors(t_sector *list_sectors)
     while (list_sectors != NULL)
     {
         printf("[IDX:  %i] -> [ID: %s, Nome: %s, Total de sensores: %i]. \n", initial_idx, list_sectors->id,
-               list_sectors->name, list_sectors->sensors_quantity);
+               list_sectors->name, countTotalSensors(list_sectors->sensors));
 
         list_sectors = list_sectors->next;
         counter++, initial_idx++;
@@ -542,7 +585,7 @@ t_sector *findSectorByIdx(t_sector *list_sectors, int idx)
     t_sector *copy_list_sectors = list_sectors;
 
     int initial_idx = 1;
-    while (list_sectors != NULL)
+    while (copy_list_sectors != NULL)
     {
         if (initial_idx == idx)
             return copy_list_sectors;
@@ -553,17 +596,36 @@ t_sector *findSectorByIdx(t_sector *list_sectors, int idx)
 }
 t_sector *promptAndFindSectorByIdx(t_sector *list_sectors)
 {
+    t_sector *sector_found = NULL;
+    int total_sectors = countTotalSectors(list_sectors);
+    if (total_sectors < 1)
+    {
+        printf("Sem setores existentes. \n");
+        return sector_found;
+    }
     listAllSectors(list_sectors);
     int sector_idx;
     printf("Digite o índice do setor: \n");
     printf(":: \n");
     scanf("%i", &sector_idx);
-    t_sector *sector_found = findSectorByIdx(list_sectors, sector_idx);
+    getchar();
+    sector_found = findSectorByIdx(list_sectors, sector_idx);
     if (sector_found == NULL)
     {
         printf("Erro ao encontrar setor. \n");
     }
     return sector_found;
+}
+int countTotalSectors(t_sector *list_sectors)
+{
+    t_sector *current_sector = list_sectors;
+    int counter = 0;
+    while (current_sector != NULL)
+    {
+        counter++;
+        current_sector = current_sector->next;
+    }
+    return counter;
 }
 
 t_sensor *createNewSensor(t_sector *sector_selected_pointer)
@@ -598,7 +660,6 @@ t_sensor *createNewSensor(t_sector *sector_selected_pointer)
     new_sensor->range_min = template.range_min;
     new_sensor->range_max = template.range_max;
     new_sensor->inspections = NULL;
-    new_sensor->inspections_quantity = 0;
 
     printf("Sensor '%s' vinculado ao setor com sucesso. \n", new_sensor->name);
 
@@ -666,7 +727,7 @@ void listAllSensors(t_sensor *list_sensors)
     while (list_sensors != NULL)
     {
         printf("[IDX:  %i] -> [ID: %s, Nome: %s, Total de inspeções: %i]. \n", initial_idx, list_sensors->id,
-               list_sensors->name, list_sensors->inspections_quantity);
+               list_sensors->name, countTotalInspections(list_sensors->inspections));
 
         list_sensors = list_sensors->next;
         counter++, initial_idx++;
@@ -703,12 +764,19 @@ t_sensor *findSensorByIdx(t_sensor *list_sensors, int idx)
 }
 t_sensor *promptAndFindSensorByIdx(t_sensor *list_sensors)
 {
+    t_sensor *sensor_found = NULL;
+    int total_sensors = countTotalSensors(list_sensors);
+    if (total_sensors < 1)
+    {
+        printf("Sem sensores existentes. \n");
+        return sensor_found;
+    }
     listAllSensors(list_sensors);
     int sensor_idx;
     printf("Digite o índice do sensor: \n");
     printf(":: \n");
     scanf("%i", &sensor_idx);
-    t_sensor *sensor_found = findSensorByIdx(list_sensors, sensor_idx);
+    sensor_found = findSensorByIdx(list_sensors, sensor_idx);
     if (sensor_found == NULL)
     {
         printf("Erro ao encontrar sensor. \n");
@@ -725,13 +793,24 @@ t_sensor_template getSensorTemplate(t_sensor_types sensor_type)
     t_sensor_template template = SENSOR_TEMPLATES[sensor_type];
     return template;
 }
+int countTotalSensors(t_sensor *list_sensors)
+{
+    t_sensor *current_sensor = list_sensors;
+    int counter = 0;
+    while (current_sensor != NULL)
+    {
+        counter++;
+        current_sensor = current_sensor->next;
+    }
+    return counter;
+}
 
 t_inspection *createNewInspection(t_sensor *sensor_selected_pointer)
 {
     t_inspection *new_inspection = NULL;
     new_inspection = (t_inspection *)malloc(sizeof(t_inspection));
     string unique_id;
-    generateUniqueId(unique_id, SENSOR);
+    generateUniqueId(unique_id, INSPECTION);
     strcpy(new_inspection->id, unique_id);
 
     time_t date;
@@ -858,18 +937,75 @@ t_inspection *findInspectionByIdx(t_inspection *list_inspections, int idx)
 }
 t_inspection *promptAndFindInspectionByIdx(t_inspection *list_inspections)
 {
+    t_inspection *inspection_found = NULL;
+    int total_inspections = countTotalInspections(list_inspections);
+    if (total_inspections < 1)
+    {
+        printf("Sem leituras existentes. \n");
+        return inspection_found;
+    }
     listAllInspections(list_inspections);
     int inspection_idx;
     printf("Digite o índice da leitura: \n");
     printf(":: \n");
     scanf("%i", &inspection_idx);
-    t_inspection *inspection_found = findInspectionByIdx(list_inspections, inspection_idx);
+    inspection_found = findInspectionByIdx(list_inspections, inspection_idx);
     if (inspection_found == NULL)
     {
         printf("Erro ao encontrar leitura. \n");
     }
     return inspection_found;
 }
+int countTotalInspections(t_inspection *list_inspections)
+{
+    t_inspection *current_inspection = list_inspections;
+    int counter = 0;
+    while (current_inspection != NULL)
+    {
+        counter++;
+        current_inspection = current_inspection->next;
+    }
+    return counter;
+}
+void updateSensorRange(t_sensor *sensor_selected_pointer)
+{
+
+    float range_min_default = sensor_selected_pointer->range_min;
+    float range_max_default = sensor_selected_pointer->range_max;
+    printf("Deseja alterar os valores de range do sensor?");
+    printf("Range mínimo de leitura do sensor: %2.f. \n", range_min_default);
+    printf("Range máximo de leitura do sensor: %2.f. \n", range_max_default);
+    printf("Digite: S - Sim, N - Não. \n");
+    char user_response;
+    scanf("%c", &user_response);
+    getchar();
+
+    if (user_response != 'S' && user_response != 's' && user_response != 'N' && user_response != 'n')
+    {
+        printf("Erro: opção inválida. \n");
+        return;
+    }
+
+    float new_range_min = 0.0;
+    float new_range_max = 0.0;
+
+    printf("Digite o novo range mínimo:");
+    scanf("%f", &new_range_min);
+
+    printf("Digite o novo range máximo:");
+    scanf("%f", &new_range_max);
+
+    if (new_range_min > new_range_max)
+    {
+        printf("Erro: range mãximo deve ser maior que o range mínimo. \n");
+        return;
+    }
+
+    sensor_selected_pointer->range_min = new_range_min;
+    sensor_selected_pointer->range_max = new_range_max;
+
+    printf("Range do sensor alterado com sucesso. \n");
+};
 
 void generateUniqueId(char *buffer, t_entities entity_type)
 {
@@ -929,7 +1065,7 @@ void searchForSectorDescription(t_location *locations)
                 printf("ID: %s\nNome: %s \nDescrição: %s \nQuantidade de "
                        "sensores: %i\n",
                        current_sector->id, current_sector->name, current_sector->description,
-                       current_sector->sensors_quantity);
+                       countTotalSensors(current_sector->sensors));
                 printf("\n");
             }
             current_sector = current_sector->next;
@@ -968,7 +1104,7 @@ void searchForSensorType(t_location *locations)
                            "de leituras: %i\n",
                            current_sensor->id, current_sensor->name,
                            mapSensorTypeToString(current_sensor->sensor_type).response, current_sensor->range_min,
-                           current_sensor->range_max, current_sensor->inspections_quantity);
+                           current_sensor->range_max, countTotalInspections(current_sensor->inspections));
                     printf("\n");
                 }
                 current_sensor = current_sensor->next;
@@ -988,7 +1124,7 @@ void generateReportsOfSectors(t_location *locations)
         {
             printf("\n");
             printf("ID: %s\nNome: %s \nDescrição: %s \nQuantidade de sensores: %i \n", current_sector->id,
-                   current_sector->name, current_sector->description, current_sector->sensors_quantity);
+                   current_sector->name, current_sector->description, countTotalSensors(current_sector->sensors));
             printf("\n");
             current_sector = current_sector->next;
         }
@@ -1029,7 +1165,7 @@ void generateReportOfSensors(t_location *locations)
                     printf("ID: %s\nNome: %s \nTipo: %s \nMin/Max: [%.3f/%.3f] \nTotal de leituras: %i\n",
                            current_sensor->id, current_sensor->name,
                            mapSensorTypeToString(current_sensor->sensor_type).response, current_sensor->range_min,
-                           current_sensor->range_max, current_sensor->inspections_quantity);
+                           current_sensor->range_max, countTotalInspections(current_sensor->inspections));
                     printf("\n");
 
                     current_sensor = current_sensor->next;
@@ -1067,7 +1203,7 @@ void generateReportOfSensors(t_location *locations)
                         printf("ID: %s\nNome: %s \nTipo: %s \nMin/Max: [%.3f/%.3f] \nTotal de leituras: %i\n",
                                current_sensor->id, current_sensor->name,
                                mapSensorTypeToString(current_sensor->sensor_type).response, current_sensor->range_min,
-                               current_sensor->range_max, current_sensor->inspections_quantity);
+                               current_sensor->range_max, countTotalInspections(current_sensor->inspections));
                         printf("\n");
                     }
 
@@ -1187,22 +1323,23 @@ void generateReportOfInspectionsAverage(t_location *locations)
         while (current_sector != NULL)
         {
             t_sensor *current_sensor = current_sector->sensors;
-            float counter_sum_values = 0.0;
 
             while (current_sensor != NULL)
             {
                 t_inspection *current_inspection = current_sensor->inspections;
+                float counter_sum_values = 0.0;
+
                 while (current_inspection != NULL)
                 {
                     counter_sum_values = counter_sum_values + current_inspection->value;
-                    if (current_sensor->inspections_quantity > 0)
+                    if (countTotalInspections(current_sensor->inspections) > 0)
                     {
                         printf("\n");
                         printf("Planta: %s \n", current_location->name);
                         printf("  Setor: %s\n", current_sector->name);
                         printf("    Sensor: %s\n", current_sensor->name);
                         printf("       Média: %.4f %s. \n",
-                               counter_sum_values / (float)current_sensor->inspections_quantity,
+                               counter_sum_values / (float)countTotalInspections(current_sensor->inspections),
                                mapSensorTypeUnitToString(current_sensor->sensor_type).response);
                         printf("\n");
                     }

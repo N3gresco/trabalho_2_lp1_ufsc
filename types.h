@@ -44,7 +44,6 @@ struct sensor
     t_inspection *inspections;
     float range_min;
     float range_max;
-    int inspections_quantity;
     t_sensor *next;
 };
 
@@ -56,7 +55,6 @@ struct sector
     string name;
     string description;
     t_sensor *sensors;
-    int sensors_quantity;
     t_sector *next;
 };
 
@@ -66,7 +64,6 @@ struct location
     string id;
     string name;
     t_sector *sectors;
-    int sectors_quantity;
     t_location *next;
 };
 
