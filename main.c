@@ -4,13 +4,13 @@
 int main()
 {
     srand(time(NULL));
+
+    t_app_state app_state = {0, .base_datasave_binary_filename = "datasave_binary.txt"};
+
     system("mkdir -p ./output/locations");
     system("mkdir -p ./output/sectors");
     system("mkdir -p ./output/sensors");
     system("mkdir -p ./output/inspections");
-
-    t_app_state app_state = {0, .base_datasave_binary_filename = "datasave_binary.txt"};
-
     handlerLoadAllEntitiesData(&app_state);
 
     for (;;)
