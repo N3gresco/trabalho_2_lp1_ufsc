@@ -11,7 +11,7 @@ int main()
 
     t_app_state app_state = {0, .base_datasave_binary_filename = "datasave_binary.txt"};
 
-    readUserDataBinaryFile(&app_state);
+    handlerLoadAllEntitiesData(&app_state);
 
     for (;;)
     {
@@ -53,26 +53,14 @@ void menuLocations(t_app_state *app_state)
     getchar();
     if (option == 0)
     {
-        saveUserDataOnBinaryFile(app_state);
+        // saveUserDataOnBinaryFile(app_state);
+        saveAllUserDataOnBinaryFile(app_state);
         shutdownProgram();
         return;
     }
     actionMenuLocations(option, app_state);
 }
 
-// Handler geral de salvamento/carregamento
-void readUserDataBinaryFile(t_app_state *app_state)
-{
-    loadLocationsFromFile(app_state,
-                          getFilepathMatchEntity(LOCATION, app_state->base_datasave_binary_filename).response);
-};
-void saveUserDataOnBinaryFile(t_app_state *app_state)
-{
-
-    t_string filepath_locations = getFilepathMatchEntity(LOCATION, app_state->base_datasave_binary_filename);
-    printf("Persistindo locations em: \"%s\" \n", filepath_locations.response);
-    saveLocationsToFile(app_state, filepath_locations.response);
-};
 t_string getFilepathMatchEntity(t_entities entity, string base_filepath)
 {
     t_string object = {.response = ""};
@@ -101,40 +89,15 @@ t_string getFilepathMatchEntity(t_entities entity, string base_filepath)
     }
     return object;
 }
-// Salvamento e carregamento individual de cada entidadade
-void saveLocationsToFile(t_app_state *app_state, string filepath)
-{
-    FILE *file = NULL;
-    file = fopen(filepath, "wb");
-    if (file == NULL)
-    {
-        printf("[LOCATIONS] Erro durante persistência de dados. \n");
-        return;
-    }
-    t_location *current_location = app_state->database;
-    while (current_location != NULL)
-    {
-        t_location copy_current_location = *current_location;
-
-        copy_current_location.next = NULL;
-        copy_current_location.sectors = NULL;
-        fwrite(&copy_current_location, sizeof(t_location), 1, file);
-        current_location = current_location->next;
-
-    }
-
-    fclose(file);
-};
 void loadLocationsFromFile(t_app_state *app_state, string filepath)
 {
     FILE *file = NULL;
     file = fopen(filepath, "rb");
     if (file == NULL)
     {
-        printf("[LOCATIONS] Erro durante leitura de dados. \n");
+        printf("[LOCATIONS] Primeira incialização ou erro de permissão. \n");
         return;
     }
-
     t_location record_location;
     while (fread(&record_location, sizeof(t_location), 1, file) == 1)
     {
@@ -147,12 +110,197 @@ void loadLocationsFromFile(t_app_state *app_state, string filepath)
     }
     fclose(file);
 };
-void saveSectorsToFile() {};
-void loadSectorsFromFile() {};
-void saveSensorsToFile() {};
-void loadSensorsFromFile() {};
-void saveInspectionsToFile() {};
-void loadInspectionsFromFile() {};
+void loadSectorsFromFile(t_app_state *app_state, string filepath)
+{
+    FILE *file = NULL;
+    file = fopen(filepath, "rb");
+    if (file == NULL)
+    {
+        printf("[SECTORS] Primeira incialização ou erro de permissão. \n");
+        return;
+    }
+
+    t_sector record_sector;
+    while (fread(&record_sector, sizeof(t_sector), 1, file) == 1)
+    {
+        t_sector *new_sector = (t_sector *)malloc(sizeof(t_sector));
+        if (new_sector)
+        {
+            *new_sector = record_sector;
+            t_location *matching_location = findLocationById(app_state->database, new_sector->location_id);
+            if (matching_location)
+            {
+                insertNewSectorAtDatabase(&matching_location->sectors, new_sector);
+            }
+            else
+            {
+                free(new_sector);
+            }
+        }
+    }
+    fclose(file);
+}
+void loadSensorsFromFile(t_app_state *app_state, string filepath)
+{
+    FILE *file = NULL;
+    file = fopen(filepath, "rb");
+    if (file == NULL)
+    {
+        printf("[SENSORS] Primeira incialização ou erro de permissão. \n");
+        return;
+    }
+
+    t_sensor record_sensor;
+    while (fread(&record_sensor, sizeof(t_sensor), 1, file) == 1)
+    {
+        t_sensor *new_sensor = (t_sensor *)malloc(sizeof(t_sensor));
+        if (new_sensor)
+        {
+            *new_sensor = record_sensor;
+            t_location *current_location = app_state->database;
+            int has_already_inserted = 0;
+            while (current_location != NULL && !has_already_inserted)
+            {
+                t_sector *matching_sector = findSectorById(current_location->sectors, new_sensor->sector_id);
+                if (matching_sector)
+                {
+                    insertNewSensorAtDatabase(&matching_sector->sensors, new_sensor);
+                    has_already_inserted = 1;
+                }
+
+                current_location = current_location->next;
+            }
+            if (!has_already_inserted)
+                free(new_sensor);
+        }
+    }
+    fclose(file);
+};
+void loadInspectionsFromFile(t_app_state *app_state, string filepath)
+{
+    FILE *file = NULL;
+    file = fopen(filepath, "rb");
+    if (file == NULL)
+    {
+        printf("[INSPECTIONS] Primeira incialização ou erro de permissão. \n");
+        return;
+    }
+
+    t_inspection record_inspection;
+    printf("cheguei aqui. \n\n");
+    printf("filepath:  %s\n\n", filepath);
+    while (fread(&record_inspection, sizeof(t_inspection), 1, file) == 1)
+    {
+        printf("cheguei aqui. 2\n\n");
+        printf("inspaction id: %s. \n\n", record_inspection.id);
+        int has_already_inserted = 0;
+        t_inspection *new_inspection = (t_inspection *)malloc(sizeof(t_inspection));
+        if (new_inspection)
+        {
+            *new_inspection = record_inspection;
+            t_location *current_location = app_state->database;
+            while (current_location != NULL && !has_already_inserted)
+            {
+                t_sector *current_sector = current_location->sectors;
+                while (current_sector != NULL && !has_already_inserted)
+                {
+                    t_sensor *matching_sensor = findSensorById(current_sector->sensors, new_inspection->sensor_id);
+                    if (matching_sensor)
+                    {
+                        insertNewInspectionAtDatabase(&matching_sensor->inspections, new_inspection);
+                        has_already_inserted = 1;
+                    }
+                    current_sector = current_sector->next;
+                }
+
+                current_location = current_location->next;
+            }
+        }
+        if (!has_already_inserted)
+        {
+            free(new_inspection);
+        }
+    }
+    fclose(file);
+}
+void saveAllUserDataOnBinaryFile(t_app_state *app_state)
+{
+    printf("Iniciando persistência de dados... \n");
+
+    t_string filepath_locations = getFilepathMatchEntity(LOCATION, app_state->base_datasave_binary_filename);
+    t_string filepath_sectors = getFilepathMatchEntity(SECTOR, app_state->base_datasave_binary_filename);
+    t_string filepath_sensors = getFilepathMatchEntity(SENSOR, app_state->base_datasave_binary_filename);
+    t_string filepath_inspections = getFilepathMatchEntity(INSPECTION, app_state->base_datasave_binary_filename);
+
+    FILE *file_locations;
+    file_locations = fopen(filepath_locations.response, "wb");
+    FILE *file_sectors;
+    file_sectors = fopen(filepath_sectors.response, "wb");
+    FILE *file_sensors;
+    file_sensors = fopen(filepath_sensors.response, "wb");
+    FILE *file_inspections;
+    file_inspections = fopen(filepath_inspections.response, "wb");
+
+    t_location *current_location = app_state->database;
+    while (current_location != NULL)
+    {
+        t_location copy_current_location = *current_location;
+        copy_current_location.sectors = NULL;
+        copy_current_location.next = NULL;
+        fwrite(&copy_current_location, sizeof(t_location), 1, file_locations);
+        t_sector *current_sector = current_location->sectors;
+        while (current_sector != NULL)
+        {
+            t_sector copy_current_sector = *current_sector;
+            copy_current_sector.sensors = NULL;
+            copy_current_sector.next = NULL;
+            fwrite(&copy_current_sector, sizeof(t_sector), 1, file_sectors);
+            t_sensor *current_sensor = current_sector->sensors;
+            while (current_sensor != NULL)
+            {
+                t_sensor copy_current_sensor = *current_sensor;
+                copy_current_sensor.inspections = NULL;
+                copy_current_sensor.next = NULL;
+                fwrite(&copy_current_sensor, sizeof(t_sensor), 1, file_sensors);
+                t_inspection *current_inspection = current_sensor->inspections;
+                while (current_inspection != NULL)
+                {
+                    t_inspection copy_current_inspection = *current_inspection;
+                    copy_current_inspection.next = NULL;
+                    fwrite(&copy_current_inspection, sizeof(t_inspection), 1, file_inspections);
+                    current_inspection = current_inspection->next;
+                }
+                current_sensor = current_sensor->next;
+            }
+            current_sector = current_sector->next;
+        }
+        current_location = current_location->next;
+    }
+
+    fclose(file_locations);
+    fclose(file_sectors);
+    fclose(file_sensors);
+    fclose(file_inspections);
+
+    printf("Dados salvos. \n");
+}
+void handlerLoadAllEntitiesData(t_app_state *app_state)
+{
+    printf("Iniciando carregamento de dados... \n");
+    printf("Recuperando locations... \n");
+    loadLocationsFromFile(app_state,
+                          getFilepathMatchEntity(LOCATION, app_state->base_datasave_binary_filename).response);
+    printf("Recuperando sectors... \n");
+    loadSectorsFromFile(app_state, getFilepathMatchEntity(SECTOR, app_state->base_datasave_binary_filename).response);
+    printf("Recuperando sensors... \n");
+    loadSensorsFromFile(app_state, getFilepathMatchEntity(SENSOR, app_state->base_datasave_binary_filename).response);
+    printf("Recuperando inspections... \n");
+    loadInspectionsFromFile(app_state,
+                            getFilepathMatchEntity(INSPECTION, app_state->base_datasave_binary_filename).response);
+    printf("Dados salvos carregados. \n");
+
+    confirmAndClear();
+};
 
 void menuSectors(t_app_state *app_state)
 {
@@ -459,7 +607,7 @@ void insertNewLocationAtDatabase(t_location **list_locations, t_location *new_lo
         new_location->next = *list_locations;
     }
     *list_locations = new_location;
-    printf("Nova planta foi inserida com sucesso. \n");
+    printf("Nova planta foi inserida com sucesso\n-> ID: %s, Nome: %s. \n", new_location->id, new_location->name);
 }
 void deleteLocationAtDatabase(t_location **list_locations, string location_id)
 {
@@ -472,7 +620,7 @@ void deleteLocationAtDatabase(t_location **list_locations, string location_id)
     t_location *current_location = *list_locations;
     t_location *temp;
 
-    t_location *location_to_delete = findLocationById(list_locations, location_id);
+    t_location *location_to_delete = findLocationById(*list_locations, location_id);
 
     if (location_to_delete == NULL)
     {
@@ -523,9 +671,9 @@ void selectLocation(t_location *location, t_location **location_selected_pointer
 {
     *location_selected_pointer = location;
 };
-t_location *findLocationById(t_location **list_locations, string location_id)
+t_location *findLocationById(t_location *list_locations, string location_id)
 {
-    t_location *copy_list_location = *list_locations;
+    t_location *copy_list_location = list_locations;
     while (copy_list_location != NULL && strcmp(copy_list_location->id, location_id) != 0)
     {
         copy_list_location = copy_list_location->next;
@@ -611,7 +759,7 @@ void insertNewSectorAtDatabase(t_sector **list_sectors, t_sector *new_sector)
         new_sector->next = *list_sectors;
     }
     *list_sectors = new_sector;
-    printf("Novo setor foi inserido com sucesso. \n");
+    printf("Novo setor foi inserido com sucesso.\n-> ID: %s, Nome: %s.\n", new_sector->id, new_sector->name);
 }
 void deleteSectorAtDatabase(t_sector **list_sectors, string sector_id)
 {
@@ -780,7 +928,7 @@ void insertNewSensorAtDatabase(t_sensor **list_sensors, t_sensor *new_sensor)
         new_sensor->next = *list_sensors;
     }
     *list_sensors = new_sensor;
-    printf("Novo sensor foi inserido com sucesso. \n");
+    printf("Novo sensor foi inserido com sucesso.\n-> ID: %s, Nome: %s. \n", new_sensor->id, new_sensor->name);
 }
 void deleteSensorAtDatabase(t_sensor **list_sensors, string sensor_id)
 {
@@ -920,6 +1068,7 @@ t_inspection *createNewInspection(t_sensor *sensor_selected_pointer)
     time_t date;
     time(&date);
     new_inspection->date_inspection = date;
+    strcpy(new_inspection->sensor_id, sensor_selected_pointer->id);
 
     printf("Digite o valor da leitura (%.2f-%.2f): \n", sensor_selected_pointer->range_min,
            sensor_selected_pointer->range_max);
@@ -952,7 +1101,8 @@ void insertNewInspectionAtDatabase(t_inspection **list_inspections, t_inspection
         new_inspection->next = *list_inspections;
     }
     *list_inspections = new_inspection;
-    printf("Nova leitura foi inserido com sucesso. \n");
+    printf("Nova leitura foi inserido com sucesso.\n-> ID: %s, Valor: %.2f. \n", new_inspection->id,
+           new_inspection->value);
 }
 void deleteInspectionAtDatabase(t_inspection **list_inspections, string inspection_id)
 {
