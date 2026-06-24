@@ -5,7 +5,8 @@ int main()
 {
     srand(time(NULL));
 
-    t_app_state app_state = {0, .base_datasave_binary_filename = "datasave_binary.txt"};
+    t_app_state app_state = {0, .default_binary_filename = "datasave_binary.txt", .filepath_csv = "spreadsheet.csv",
+                             .filepath_html = "index.html"};
 
     system("mkdir -p ./output/locations");
     system("mkdir -p ./output/sectors");
@@ -47,6 +48,7 @@ void menuLocations(t_app_state *app_state)
     printf("3. Deletar Planta \n");
     printf("4. Realizar Busca (Planta, Setor, Sensor) \n");
     printf("5. Relatórios \n");
+    printf("6. Exportar dados\n");
     printf("0. Fechar (Sair do programa):. \n");
     printf(":: \n");
     scanf("%i", &option);
@@ -195,10 +197,10 @@ void saveAllUserDataOnBinaryFile(t_app_state *app_state)
 {
     printf("Iniciando persistência de dados... \n");
 
-    t_string filepath_locations = getFilepathMatchEntity(LOCATION, app_state->base_datasave_binary_filename);
-    t_string filepath_sectors = getFilepathMatchEntity(SECTOR, app_state->base_datasave_binary_filename);
-    t_string filepath_sensors = getFilepathMatchEntity(SENSOR, app_state->base_datasave_binary_filename);
-    t_string filepath_inspections = getFilepathMatchEntity(INSPECTION, app_state->base_datasave_binary_filename);
+    t_string filepath_locations = getFilepathMatchEntity(LOCATION, app_state->default_binary_filename);
+    t_string filepath_sectors = getFilepathMatchEntity(SECTOR, app_state->default_binary_filename);
+    t_string filepath_sensors = getFilepathMatchEntity(SENSOR, app_state->default_binary_filename);
+    t_string filepath_inspections = getFilepathMatchEntity(INSPECTION, app_state->default_binary_filename);
 
     FILE *file_locations;
     file_locations = fopen(filepath_locations.response, "wb");
@@ -256,15 +258,13 @@ void handlerLoadAllEntitiesData(t_app_state *app_state)
 {
     printf("Iniciando carregamento de dados... \n");
     printf("Recuperando locations... \n");
-    loadLocationsFromFile(app_state,
-                          getFilepathMatchEntity(LOCATION, app_state->base_datasave_binary_filename).response);
+    loadLocationsFromFile(app_state, getFilepathMatchEntity(LOCATION, app_state->default_binary_filename).response);
     printf("Recuperando sectors... \n");
-    loadSectorsFromFile(app_state, getFilepathMatchEntity(SECTOR, app_state->base_datasave_binary_filename).response);
+    loadSectorsFromFile(app_state, getFilepathMatchEntity(SECTOR, app_state->default_binary_filename).response);
     printf("Recuperando sensors... \n");
-    loadSensorsFromFile(app_state, getFilepathMatchEntity(SENSOR, app_state->base_datasave_binary_filename).response);
+    loadSensorsFromFile(app_state, getFilepathMatchEntity(SENSOR, app_state->default_binary_filename).response);
     printf("Recuperando inspections... \n");
-    loadInspectionsFromFile(app_state,
-                            getFilepathMatchEntity(INSPECTION, app_state->base_datasave_binary_filename).response);
+    loadInspectionsFromFile(app_state, getFilepathMatchEntity(INSPECTION, app_state->default_binary_filename).response);
     printf("Dados salvos carregados. \n");
 
     confirmAndClear();
@@ -323,6 +323,31 @@ void menuInspections(t_app_state *app_state)
     getchar();
     actionMenuInspections(option, app_state);
 }
+void menuExportations(t_app_state *app_state)
+{
+    int opcao;
+
+    do
+    {
+
+        printf("Escolha uma opção\n");
+        printf("1. Exportar como .csv\n");
+        printf("2. Exportar como .html\n");
+        printf("0. Voltar");
+        scanf("%i", &opcao);
+        getchar();
+
+        switch (opcao)
+        {
+        case 1:
+            generateCSVFile(app_state);
+            break;
+        case 2:
+            generateHTMLFile(app_state);
+            break;
+        }
+    } while (opcao != 0);
+}
 void actionMenuLocations(int option, t_app_state *app_state)
 {
     switch (option)
@@ -358,6 +383,9 @@ void actionMenuLocations(int option, t_app_state *app_state)
         handleGenerateSystemReport(app_state);
         break;
     }
+    case 6:
+        menuExportations(app_state);
+        break;
     default:
         break;
     }
@@ -366,13 +394,14 @@ void actionMenuSectors(int option, t_app_state *app_state)
 {
     switch (option)
     {
-    case 1:
+    case 1: {
         t_sector *new_sector = createNewSector(app_state->location_selected_pointer);
         if (new_sector == NULL)
             return;
         insertNewSectorAtDatabase(&app_state->location_selected_pointer->sectors, new_sector);
         confirmAndClear();
-        break;
+    }
+    break;
     case 2: {
         t_sector *sector_found = promptAndFindSectorByIdx(app_state->location_selected_pointer->sectors);
         if (sector_found == NULL)
@@ -399,13 +428,14 @@ void actionMenuSensors(int option, t_app_state *app_state)
 {
     switch (option)
     {
-    case 1:
+    case 1: {
         t_sensor *new_sensor = createNewSensor(app_state->sector_selected_pointer);
         if (new_sensor == NULL)
             return;
         insertNewSensorAtDatabase(&app_state->sector_selected_pointer->sensors, new_sensor);
         confirmAndClear();
         break;
+    }
     case 2: {
         t_sensor *sensor_found = promptAndFindSensorByIdx(app_state->sector_selected_pointer->sensors);
         if (sensor_found == NULL)
@@ -432,13 +462,14 @@ void actionMenuInspections(int option, t_app_state *app_state)
 {
     switch (option)
     {
-    case 1:
+    case 1: {
         t_inspection *new_inspection = createNewInspection(app_state->sensor_selected_pointer);
         if (new_inspection == NULL)
             return;
         insertNewInspectionAtDatabase(&app_state->sensor_selected_pointer->inspections, new_inspection);
         confirmAndClear();
         break;
+    }
     case 2:
         listAllInspections(app_state->sensor_selected_pointer->inspections);
         break;
@@ -1699,6 +1730,65 @@ void generateReportOfInspectionsVariation(t_location *locations)
         }
     }
 };
+void generateCSVFile(t_app_state *app_state)
+{
+    FILE *fp_locations = NULL;
+
+    string filepath_locations;
+    strcpy(filepath_locations, getFilepathMatchEntity(LOCATION, app_state->filepath_csv).response);
+    fp_locations = fopen(filepath_locations, "w");
+
+    fprintf(fp_locations, "id; nome\n");
+
+    t_location *current_location = app_state->database;
+    while (current_location != NULL)
+    {
+        printf("ID: %s - Exportado para .csv.", current_location->id);
+        fprintf(fp_locations, "%s; %s", current_location->id, current_location->name);
+        current_location = current_location->next;
+    }
+
+    fclose(fp_locations);
+
+    printf("Arquivo (%s) gerado com sucesso. \n", filepath_locations);
+}
+void generateHTMLFile(t_app_state *app_state)
+{
+    FILE *fp = NULL;
+
+    fp = fopen(app_state->filepath_html, "w");
+
+    fprintf(fp, "<html>\n");
+    fprintf(fp, "<body>\n");
+
+    fprintf(fp, "<table>\n");
+    fprintf(fp, "<caption>Tabela de Plantas</caption>");
+
+    fprintf(fp, "<thead>\n");
+    fprintf(fp, "<tr>\n");
+    fprintf(fp, "<th>Id</th>\n");
+    fprintf(fp, "<th>Nome</th>\n");
+    fprintf(fp, "</tr>\n");
+    fprintf(fp, "</thead>\n");
+    fprintf(fp, "<tbody>\n");
+    t_location *current_location = app_state->database;
+
+    while (current_location != NULL)
+    {
+        fprintf(fp, "<tr>");
+        fprintf(fp, "<td>%s</td>", current_location->id);
+        fprintf(fp, "<td>%s</td>", current_location->name);
+        fprintf(fp, "</tr>");
+        current_location = current_location->next;
+    }
+    fprintf(fp, "</tbody>\n");
+    fprintf(fp, "</table>\n");
+    fprintf(fp, "</body>\n");
+    fprintf(fp, "</html>\n");
+
+    fclose(fp);
+    printf("Arquivo (index.html) gerado com sucesso.\n");
+}
 
 t_string getFilepathMatchEntity(t_entities entity, string base_filepath)
 {
