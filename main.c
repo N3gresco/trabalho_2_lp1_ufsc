@@ -323,31 +323,7 @@ void menuInspections(t_app_state *app_state)
     getchar();
     actionMenuInspections(option, app_state);
 }
-void menuExportations(t_app_state *app_state)
-{
-    int opcao;
 
-    do
-    {
-
-        printf("Escolha uma opção\n");
-        printf("1. Exportar como .csv\n");
-        printf("2. Exportar como .html\n");
-        printf("0. Voltar");
-        scanf("%i", &opcao);
-        getchar();
-
-        switch (opcao)
-        {
-        case 1:
-            generateCSVFile(app_state);
-            break;
-        case 2:
-            generateHTMLFile(app_state);
-            break;
-        }
-    } while (opcao != 0);
-}
 void actionMenuLocations(int option, t_app_state *app_state)
 {
     switch (option)
@@ -384,7 +360,7 @@ void actionMenuLocations(int option, t_app_state *app_state)
         break;
     }
     case 6:
-        menuExportations(app_state);
+        handleExportDataOfSystem(app_state);
         break;
     default:
         break;
@@ -545,6 +521,30 @@ void handleSearchInSystem(t_app_state *app_state)
         }
     }
 };
+void handleExportDataOfSystem(t_app_state *app_state)
+{
+    int opcao;
+    do
+    {
+
+        printf("Escolha uma opção: \n");
+        printf("1. Exportar como .csv\n");
+        printf("2. Exportar como .html\n");
+        printf("0. Voltar \n");
+        scanf("%i", &opcao);
+        getchar();
+
+        switch (opcao)
+        {
+        case 1:
+            generateCSVFile(app_state);
+            break;
+        case 2:
+            generateHTMLFile(app_state);
+            break;
+        }
+    } while (opcao != 0);
+}
 void resetStateOfMenuSelectedPointers(t_entities entity_type, t_app_state *state)
 {
     switch (entity_type)
@@ -1744,7 +1744,7 @@ void generateCSVFile(t_app_state *app_state)
     while (current_location != NULL)
     {
         printf("ID: %s - Exportado para .csv.", current_location->id);
-        fprintf(fp_locations, "%s; %s", current_location->id, current_location->name);
+        fprintf(fp_locations, "%s; %s\n", current_location->id, current_location->name);
         current_location = current_location->next;
     }
 
