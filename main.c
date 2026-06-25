@@ -1730,6 +1730,7 @@ void generateReportOfInspectionsVariation(t_location *locations)
         }
     }
 };
+
 void generateCSVFile(t_app_state *app_state)
 {
     FILE *fp_locations = NULL;
@@ -1779,8 +1780,94 @@ void generateHTMLFile(t_app_state *app_state)
         fprintf(fp, "<td>%s</td>", current_location->id);
         fprintf(fp, "<td>%s</td>", current_location->name);
         fprintf(fp, "</tr>");
+
+        t_sector *current_sector = current_location->sectors;
+
         current_location = current_location->next;
     }
+    fprintf(fp, "</tbody>\n");
+    fprintf(fp, "</table>\n");
+
+    fprintf(fp, "<table>\n");
+    fprintf(fp, "<caption>Tabela de setores</caption>");
+
+    fprintf(fp, "<thead>\n");
+    fprintf(fp, "<tr>\n");
+    fprintf(fp, "<th>Id</th>\n");
+    fprintf(fp, "<th>Nome</th>\n");
+    fprintf(fp, "<th>Id da Planta</th>\n");
+    fprintf(fp, "<th>Descrição</th>\n");
+    fprintf(fp, "</tr>\n");
+    fprintf(fp, "</thead>\n");
+    fprintf(fp, "<tbody>\n");
+
+    t_location *current_location_sectors = app_state->database;
+    while (current_location_sectors != NULL)
+    {
+        t_sector *current_sector = current_location_sectors->sectors;
+
+        while (current_sector != NULL)
+        {
+
+            fprintf(fp, "<tr>");
+            fprintf(fp, "<td>%s</td>", current_sector->id);
+            fprintf(fp, "<td>%s</td>", current_sector->name);
+            fprintf(fp, "<td>%s</td>", current_sector->location_id);
+            fprintf(fp, "<td>%s</td>", current_sector->description);
+            fprintf(fp, "</tr>");
+
+            current_sector = current_sector->next;
+        }
+
+        current_location_sectors = current_location_sectors->next;
+    }
+
+    fprintf(fp, "</tbody>\n");
+    fprintf(fp, "</table>\n");
+
+    fprintf(fp, "<table>\n");
+    fprintf(fp, "<caption>Tabela de sensores</caption>");
+
+    fprintf(fp, "<thead>\n");
+    fprintf(fp, "<tr>\n");
+    fprintf(fp, "<th>Id</th>\n");
+    fprintf(fp, "<th>Nome</th>\n");
+    fprintf(fp, "<th>Id do setor</th>\n");
+    fprintf(fp, "<th>Tipo do sensor</th>\n");
+    fprintf(fp, "<th>Range minimo</th>\n");
+    fprintf(fp, "<th>Range maximo</th>\n");
+    fprintf(fp, "</tr>\n");
+    fprintf(fp, "</thead>\n");
+    fprintf(fp, "<tbody>\n");
+
+    t_location *current_location_sensors = app_state->database;
+    while (current_location_sensors != NULL)
+    {
+        t_sector *current_sectors_sensors = current_location_sensors->sectors;
+
+        while (current_sectors_sensors != NULL)
+        {
+            t_sensor *current_sensor = current_sectors_sensors->sensors;
+
+            while (current_sensor != NULL)
+            {
+                fprintf(fp, "<tr>");
+                fprintf(fp, "<td>%s</td>", current_sensor->id);
+                fprintf(fp, "<td>%s</td>", current_sensor->name);
+                fprintf(fp, "<td>%s</td>", current_sensor->sector_id);
+                fprintf(fp, "<td>%i</td>", current_sensor->sensor_type);
+                fprintf(fp, "<td>%f</td>", current_sensor->range_min);
+                fprintf(fp, "<td>%f</td>", current_sensor->range_max);
+                fprintf(fp, "</tr>");
+
+                current_sensor = current_sensor->next;
+            }
+            current_sectors_sensors = current_sectors_sensors->next;
+        }
+
+        current_location_sensors = current_location_sensors->next;
+    }
+
     fprintf(fp, "</tbody>\n");
     fprintf(fp, "</table>\n");
     fprintf(fp, "</body>\n");
