@@ -5,7 +5,7 @@
 [X] [Marlon] - 21/06/2026 - Count functions, update range function, fix null errors and segmentation faults, persistência de dados
 
 [] Exportar para arq. texto .csv  
-[] Exportar para arq. texto .html   
+[X] Exportar para arq. texto .html   
 [] Funçao recursiva  
 [] compilar codigo a partir de um Makefile  
 [] desacoplar o main em arquivos .h e .c 
