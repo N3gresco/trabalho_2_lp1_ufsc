@@ -1734,10 +1734,23 @@ void generateReportOfInspectionsVariation(t_location *locations)
 void generateCSVFile(t_app_state *app_state)
 {
     FILE *fp_locations = NULL;
+    FILE *fp_sectors = NULL;
+    FILE *fp_sensors = NULL;
+    FILE *fp_inspections = NULL;
 
     string filepath_locations;
     strcpy(filepath_locations, getFilepathMatchEntity(LOCATION, app_state->filepath_csv).response);
     fp_locations = fopen(filepath_locations, "w");
+    string filepath_sectors;
+    strcpy(filepath_sectors, getFilepathMatchEntity(SECTOR, app_state->filepath_csv).response);
+    fp_sectors = fopen(filepath_sectors, "w");
+    string filepath_sensors;
+    strcpy(filepath_sensors, getFilepathMatchEntity(SENSOR, app_state->filepath_csv).response);
+    fp_sensors = fopen(filepath_sensors, "w");
+    string filepath_inspections;
+    strcpy(filepath_inspections, getFilepathMatchEntity(INSPECTION, app_state->filepath_csv).response);
+    fp_inspections = fopen(filepath_inspections, "w");
+    
 
     fprintf(fp_locations, "id; nome\n");
 
@@ -1747,9 +1760,48 @@ void generateCSVFile(t_app_state *app_state)
         printf("ID: %s - Exportado para .csv.", current_location->id);
         fprintf(fp_locations, "%s; %s\n", current_location->id, current_location->name);
         current_location = current_location->next;
+        
+        t_sector *current_sector = current_location->sectors;
+
+        fprintf(fp_sectors, "id; nome; id da planta; descricao\n");
+        while(current_sector != NULL){
+        
+            printf("ID: %s - Exportado para .csv.", current_sector->id);
+            fprintf(fp_sectors, "%s; %s; %s; %s\n", current_sector->id, current_sector->name, current_sector->location_id,
+            current_sector->description);
+            current_sector = current_sector->next;
+
+            t_sensor *current_sensor = current_sector->sensors;
+
+            fprintf(fp_sensors, "id; nome; id do setor; tipo do sensor\n");
+            while( current_sensor != NULL){
+            
+                printf("ID: %s - Exportado para .csv.", current_sensor->id);
+                fprintf(fp_sensors, "%s; %s; %s; %i\n", current_sensor->id, current_sensor->name, current_sensor->sector_id,
+                current_sensor->sensor_type);
+                current_sensor = current_sensor->next;
+
+                t_inspection *current_inspection = NULL;
+
+                fprintf(fp_inspections, "id; id do sensor; Valor da inpecao; Data da inspecao\n");
+                while( current_inspection != NULL){
+
+                printf("ID: %s - Exportado para .csv.", current_inspection->id);
+                fprintf(fp_inspections, "%s; %s; %f; %i\n", current_inspection->id, current_inspection->sensor_id, 
+                current_inspection->value, current_inspection->date_inspection);
+                current_inspection = current_inspection->next;
+
+                }
+            }
+
+        }
     }
 
     fclose(fp_locations);
+    fclose(fp_sectors);
+    fclose(fp_sensors);
+    fclose(fp_inspections);
+    
 
     printf("Arquivo (%s) gerado com sucesso. \n", filepath_locations);
 }
