@@ -1870,6 +1870,54 @@ void generateHTMLFile(t_app_state *app_state)
 
     fprintf(fp, "</tbody>\n");
     fprintf(fp, "</table>\n");
+
+    fprintf(fp, "<table>\n");
+    fprintf(fp, "<caption>Tabela de leitura de sensores</caption>");
+
+    fprintf(fp, "<thead>\n");
+    fprintf(fp, "<tr>\n");
+    fprintf(fp, "<th>Id</th>\n");
+    fprintf(fp, "<th>Id do sensor</th>\n");
+    fprintf(fp, "<th>Valor da leitura</th>\n");
+    fprintf(fp, "<th>Data da leitrua</th>\n");
+    fprintf(fp, "</tr>\n");
+    fprintf(fp, "</thead>\n");
+    fprintf(fp, "<tbody>\n");
+
+     t_location *current_location_inspections = app_state->database;
+    while (current_location_inspections != NULL)
+    {
+        t_sector *current_sensors_inspections = current_location_inspections->sectors;
+
+        while (current_sensors_inspections != NULL)
+        {
+            t_sensor *sensor_inspections = current_sensors_inspections->sensors;
+
+            while (sensor_inspections != NULL)
+            {  
+                t_inspection *current_inspection = sensor_inspections->inspections;
+                
+                while( current_inspection != NULL){
+
+                    fprintf(fp, "<tr>");
+                    fprintf(fp, "<td>%s</td>", current_inspection->id);
+                    fprintf(fp, "<td>%s</td>", current_inspection->sensor_id);
+                    fprintf(fp, "<td>%f</td>", current_inspection->value);
+                    fprintf(fp, "<td>%i</td>", current_inspection->date_inspection);
+                    fprintf(fp, "</tr>");
+
+                    current_inspection = current_inspection->next;
+                }
+                sensor_inspections = sensor_inspections->next;
+            }
+           current_sensors_inspections = current_sensors_inspections->next;
+        }
+
+        current_location_inspections = current_location_inspections->next;
+    }
+  
+    fprintf(fp, "</tbody>\n");
+    fprintf(fp, "</table>\n");
     fprintf(fp, "</body>\n");
     fprintf(fp, "</html>\n");
 
